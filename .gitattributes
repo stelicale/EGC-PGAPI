@@ -1,6 +1,6 @@
-# normalizează automat text => LF în repo
+# Default behavior: Auto-detect text files and normalize line endings
 * text=auto
 
-# sau pentru fișiere C++ specific:
+# Enforce LF (Unix) line endings to prevent cross-platform merge conflicts
 *.hpp text eol=lf
 *.cpp text eol=lf
