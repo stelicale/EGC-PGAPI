@@ -1,5 +1,5 @@
 #include "lab_m1/Train-Geeks/Tema2.hpp"
-#include "lab_m1/Train-Geeks/object3D.cpp"
+#include "lab_m1/Train-Geeks/object3D.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
