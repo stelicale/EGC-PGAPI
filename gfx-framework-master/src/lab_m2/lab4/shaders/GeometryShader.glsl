@@ -4,7 +4,7 @@
 // TODO(student): First, generate a curve (via line strip),
 // then a rotation/translation surface (via triangle strip)
 layout(lines) in;
-layout(line_strip, max_vertices = 256) out;
+layout(triangle_strip, max_vertices = 256) out;
 
 // Uniform properties
 uniform mat4 View;
@@ -12,8 +12,13 @@ uniform mat4 Projection;
 uniform vec3 control_p0, control_p1, control_p2, control_p3;
 uniform int no_of_instances;
 // TODO(student): Declare any other uniforms here
+uniform int no_of_generated_points;
+uniform float max_translate;
+uniform float max_rotate;
+uniform int surface_type;
 
 // Input
+// first and second vertices of the line strip are the first and second control points
 in int instance[2];
 
 
@@ -65,10 +70,37 @@ void main()
 
     // TODO(student): Rather than emitting vertices for the control
     // points, you must emit vertices that approximate the curve itself.
-    gl_Position = Projection * View * vec4(control_p0, 1);   EmitVertex();
-    gl_Position = Projection * View * vec4(control_p1, 1);   EmitVertex();
-    gl_Position = Projection * View * vec4(control_p2, 1);   EmitVertex();
-    gl_Position = Projection * View * vec4(control_p3, 1);   EmitVertex();
+    // One implicit instance creates one band between two neighbouring curves.
+    // The last rotational band reaches 2*PI, therefore it closes the surface.
+    float current_fraction = float(instance[0]) / float(no_of_instances);
+    float next_fraction = float(instance[0] + 1) / float(no_of_instances);
+
+    for (int i = 0; i < no_of_generated_points; ++i)
+    {
+        // Include both end points so consecutive samples form a complete strip.
+        float t = float(i) / float(no_of_generated_points - 1);
+        vec3 curve_point = bezier(t);
+        vec3 first_curve_point;
+        vec3 second_curve_point;
+
+        if (surface_type == SURFACE_TYPE_ROTATION)
+        {
+            first_curve_point = rotateY(curve_point, current_fraction * max_rotate);
+            second_curve_point = rotateY(curve_point, next_fraction * max_rotate);
+        }
+        else
+        {
+            // Translation is intentionally the fallback for an invalid type too.
+            first_curve_point = translateX(curve_point, current_fraction * max_translate);
+            second_curve_point = translateX(curve_point, next_fraction * max_translate);
+        }
+
+        // Alternating vertices from the two curves constructs a triangle strip.
+        gl_Position = Projection * View * vec4(first_curve_point, 1.0);
+        EmitVertex();
+        gl_Position = Projection * View * vec4(second_curve_point, 1.0);
+        EmitVertex();
+    }
     EndPrimitive();
 
 }

@@ -73,7 +73,9 @@ void main()
 
     case 6:
         // TODO(student): Multiply the light accumulation sample and the color sample to compute final pixel color.
-        out_color = vec4(color(), 1);
+        // The light buffer already includes the ambient term and accumulated
+        // point-light contributions, so it modulates the material albedo.
+        out_color = vec4(color() * light_accumulation(), 1);
         break;
 
     default:

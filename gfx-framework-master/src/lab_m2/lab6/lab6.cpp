@@ -293,8 +293,14 @@ unsigned int Lab6::UploadCubeMapTexture(const std::string &pos_x, const std::str
 
     unsigned int textureID = 0;
     // TODO(student): Create the texture
+    // Ask OpenGL for one new texture object; its ID is stored in textureID
+    glGenTextures(1, &textureID);
 
     // TODO(student): Bind the texture
+    // A cubemap is a special texture type made of 6 square images (one per cube face),
+    // so we bind it to the GL_TEXTURE_CUBE_MAP target. All the glTexParameteri / glGenerateMipmap
+    // calls below affect the texture that is currently bound to this target
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
@@ -314,7 +320,25 @@ unsigned int Lab6::UploadCubeMapTexture(const std::string &pos_x, const std::str
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     // TODO(student): Load texture information for each face
+    // stb_image tells us how many channels each image has (chn): 4 = RGBA, 3 = RGB, ...
+    // We pick the OpenGL pixel format accordingly. (All 6 faces have the same size and format.)
+    GLenum format = GL_RGBA;
+    if (chn == 1)      format = GL_RED;
+    else if (chn == 2) format = GL_RG;
+    else if (chn == 3) format = GL_RGB;
 
+    // The 6 faces are 6 consecutive enum values:
+    //   GL_TEXTURE_CUBE_MAP_POSITIVE_X, NEGATIVE_X, POSITIVE_Y, NEGATIVE_Y, POSITIVE_Z, NEGATIVE_Z
+    // glTexImage2D(target, mip level, internal format, width, height, border (must be 0),
+    //              format of the data we give, type of each component, pointer to the pixels)
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data_pos_x);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data_neg_x);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data_pos_y);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data_neg_y);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data_pos_z);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data_neg_z);
+
+    // Build the mipmap chain (smaller versions of each face), needed because MIN_FILTER uses mipmaps
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
     if (GetOpenGLError() == GL_INVALID_OPERATION)
     {
@@ -339,13 +363,22 @@ void Lab6::CreateFramebuffer(int width, int height)
     // declared in lab6.h
 
     // TODO(student): Generate and bind the framebuffer
-
+    // A framebuffer object (FBO) lets us render into textures instead of the screen
+    glGenFramebuffers(1, &framebuffer_object);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_object);
 
     // TODO(student): Generate and bind the color texture
-
+    // This texture will hold the colors of the scene seen from the center mesh (6 directions)
+    glGenTextures(1, &color_texture);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, color_texture);
 
     // TODO(student): Initialize the color textures
-
+    // Allocate storage for the 6 faces (data = NULL, we do not upload pixels, the GPU will
+    // fill them when we render into the framebuffer). Faces must be square: width == height
+    for (int i = 0; i < 6; i++)
+    {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    }
 
 
     if (color_texture) {
@@ -378,16 +411,34 @@ void Lab6::CreateFramebuffer(int width, int height)
     }
 
     // TODO(student): Generate and bind the depth texture
+    // The depth texture is also a cubemap, so the depth test works correctly on each of the 6 faces
+    glGenTextures(1, &depth_texture);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depth_texture);
 
+    // Depth values must not be interpolated/mipmapped, so we use NEAREST filtering
+    // (this also keeps the texture "complete" without a mipmap chain)
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     // TODO(student): Initialize the depth textures
-
+    // Same idea as for the color texture, but with a depth format (one depth value per pixel)
+    for (int i = 0; i < 6; i++)
+    {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+    }
 
     if (depth_texture) {
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_texture, 0);
     }
 
-    glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    // Verify that the framebuffer is complete (all attachments valid); print a message if it is not
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        cout << "[ERROR] Framebuffer is not complete!" << endl;
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

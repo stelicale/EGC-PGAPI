@@ -15,14 +15,15 @@ layout(location = 0) out vec4 out_color;
 void main()
 {
     float lifetime_ratio = geom_lifetime / geom_iLifetime;
-    int fire_stage = 3 - int (lifetime_ratio / 0.25f);
+    int fire_stage = clamp(3 - int(lifetime_ratio / 0.25f), 0, 3);
     
     // TODO(student): Compute texture coordinates so that,
     // depending on the fire stage (0, 1, 2, 3), a different
     // image of a fire particle is shown.
     // Hint: each stage corresponds to a quarter of the image
 
-    vec2 tex_coord = vec2(0, 0);
+    // The four frames are arranged horizontally in the fire texture atlas.
+    vec2 tex_coord = vec2((texture_coord.x + float(fire_stage)) * 0.25, texture_coord.y);
     
     vec3 color = texture(texture_1, tex_coord).xyz;
     out_color = vec4(color, 1);

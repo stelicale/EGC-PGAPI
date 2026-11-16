@@ -93,9 +93,15 @@ void Lab2::Init()
         // The chosen color is between (0, 0, 0) and (1, 1, 1).
         // The chosen radius is between 3 and 4.
 
-        lightInfo.position = glm::vec3(0.0f);
-        lightInfo.color = glm::vec3(0.0f);
-        lightInfo.radius = 1.0f;
+        // Spread the lights through the visible scene volume.  Keeping the
+        // initial positions in world space makes the same values usable by
+        // both the orbit animation and the lighting shader.
+        lightInfo.position = glm::vec3(
+            -10.0f + 20.0f * Rand01(),
+            3.0f * Rand01(),
+            -10.0f + 20.0f * Rand01());
+        lightInfo.color = glm::vec3(Rand01(), Rand01(), Rand01());
+        lightInfo.radius = 3.0f + Rand01();
 
         lights.push_back(lightInfo);
     }
@@ -116,7 +122,9 @@ void Lab2::Update(float deltaTimeSeconds)
         // TODO(student): Move the light sources in an orbit around the center of the scene.
         // The orbit is in the xoz plane. Compute rotationRadians for the current frame 
         // such that the light sources rotate 6 degrees/second. Use deltaTimeSeconds.
-        float rotationRadians = 0.0f;
+        // Applying this incremental rotation every frame gives a constant
+        // angular speed, independently of the frame rate.
+        float rotationRadians = 6.0f * TO_RADIANS * deltaTimeSeconds;
 
         glm::mat4 rotateMatrix = glm::rotate(glm::mat4(1.0f), rotationRadians, glm::vec3(0, 1, 0));
         l.position = rotateMatrix * glm::vec4(l.position, 1.0f);
@@ -198,13 +206,23 @@ void Lab2::Update(float deltaTimeSeconds)
         {
             // TODO(student): Set the shader uniforms 'light_position', 'light_color' and 'light_radius'
             // with the values from the light source. Use shader 'shader'.
-            
+            int lightPositionLoc = shader->GetUniformLocation("light_position");
+            glUniform3fv(lightPositionLoc, 1, glm::value_ptr(lightInfo.position));
+
+            int lightColorLoc = shader->GetUniformLocation("light_color");
+            glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightInfo.color));
+
+            int lightRadiusLoc = shader->GetUniformLocation("light_radius");
+            glUniform1f(lightRadiusLoc, lightInfo.radius);
 
 
             // TODO(student): Draw the mesh "sphere" at the position of the light source
             // and scaled 2 times the light source radius.
             // Use RenderMesh(mesh, shader, position, scale). Use shader 'shader'.
-
+            // The doubled radius makes the proxy volume safely enclose every
+            // fragment affected by this point light.
+            RenderMesh(meshes["sphere"], shader, lightInfo.position,
+                       glm::vec3(2.0f * lightInfo.radius));
         }
 
         glDisable(GL_CULL_FACE);

@@ -91,7 +91,8 @@ vec3 SpotLight()
         // TODO(student): Multiply the shadow factor with the
         // result of the lighting calculation. Don't apply
         // this factor to the ambient component as well.
-        return light_att_factor * light_intensity * PhongLight() + KA;
+        float shadow_factor = ShadowFactor();
+        return shadow_factor * light_att_factor * light_intensity * PhongLight() + KA;
     }
 
     return KA;

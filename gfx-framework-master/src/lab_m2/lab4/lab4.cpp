@@ -46,6 +46,7 @@ void Lab4::Init()
     no_of_instances = 5;                    // number of instances (number of curves that contain the surface)
     max_translate = 8.0f;                   // for the translation surface, it's the distance between the first and the last curve
     max_rotate = glm::radians(360.0f);      // for the rotation surface, it's the angle between the first and the last curve
+    draw_rotation_surface = false;          // start with the translation surface
 
     // Define control points
     control_p0 = glm::vec3(-4.0, -2.5,  1.0);
@@ -133,6 +134,10 @@ void Lab4::Update(float deltaTimeSeconds)
     // creating the translation/rotation surfaces (max_translate, max_rotate).
     // NOTE: If you're feeling lost and need a frame of reference while doing
     // this lab, go to `FrameEnd()` and activate `DrawCoordinateSystem()`.
+    glUniform1i(glGetUniformLocation(shader->program, "no_of_generated_points"), no_of_generated_points);
+    glUniform1f(glGetUniformLocation(shader->program, "max_translate"), max_translate);
+    glUniform1f(glGetUniformLocation(shader->program, "max_rotate"), max_rotate);
+    glUniform1i(glGetUniformLocation(shader->program, "surface_type"), draw_rotation_surface ? 0 : 1);
 
     Mesh* mesh = meshes["surface"];
 
@@ -202,6 +207,32 @@ void Lab4::OnKeyPress(int key, int mods)
     // TODO(student): Use keys to change the number of instances and the
     // number of generated points. Avoid the camera keys, and avoid the
     // the keys from `OnInputUpdate`.
+    constexpr unsigned int MIN_GENERATED_POINTS = 2;
+    // The geometry shader emits two vertices per sample for a surface band.
+    constexpr unsigned int MAX_GENERATED_POINTS = 128;
+    constexpr unsigned int MIN_SURFACE_BANDS = 1;
+    constexpr unsigned int MAX_SURFACE_BANDS = 128;
+
+    // Square brackets control the sampling density of every Bézier curve.
+    if (key == GLFW_KEY_RIGHT_BRACKET && no_of_generated_points < MAX_GENERATED_POINTS) {
+        ++no_of_generated_points;
+    }
+    if (key == GLFW_KEY_LEFT_BRACKET && no_of_generated_points > MIN_GENERATED_POINTS) {
+        --no_of_generated_points;
+    }
+
+    // Comma and period control how many adjacent curve pairs form the surface.
+    if (key == GLFW_KEY_PERIOD && no_of_instances < MAX_SURFACE_BANDS) {
+        ++no_of_instances;
+    }
+    if (key == GLFW_KEY_COMMA && no_of_instances > MIN_SURFACE_BANDS) {
+        --no_of_instances;
+    }
+
+    // Switch between sweeping the curve along X and revolving it about Y.
+    if (key == GLFW_KEY_T) {
+        draw_rotation_surface = !draw_rotation_surface;
+    }
 
 }
 

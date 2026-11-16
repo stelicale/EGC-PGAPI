@@ -74,7 +74,7 @@ endif()
 
 
 # Gather the source files
-file(GLOB_RECURSE GFXF_SOURCES
+file(GLOB_RECURSE GFXF_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_LIST_DIR}/src/components/*.c*
     ${CMAKE_CURRENT_LIST_DIR}/src/core/*.c*
     ${CMAKE_CURRENT_LIST_DIR}/src/utils/*.c*
@@ -88,7 +88,7 @@ file(GLOB_RECURSE GFXF_SOURCES
 
 
 # Gather the header files
-file(GLOB_RECURSE GFXF_HEADERS_PRIVATE
+file(GLOB_RECURSE GFXF_HEADERS_PRIVATE CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_LIST_DIR}/src/components/*.h*
     ${CMAKE_CURRENT_LIST_DIR}/src/core/*.h*
     ${CMAKE_CURRENT_LIST_DIR}/src/utils/*.h*

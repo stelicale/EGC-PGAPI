@@ -25,7 +25,8 @@ Lab3::~Lab3()
 
 void Lab3::Init()
 {
-    nrInstances = 0;
+    // Two columns with four bamboo plants each are visible from startup.
+    nrInstances = 8;
     maxInstances = 50;
     shrink = 0;
 
@@ -71,9 +72,16 @@ void Lab3::Update(float deltaTimeSeconds)
 
         // TODO(student): Add a shrinking parameter for scaling each
         // triangle in the geometry shader
+        int loc_shrink = shader->GetUniformLocation("shrink");
+        glUniform1f(loc_shrink, shrink);
+
+        // Mesh::Render binds its diffuse texture on texture unit 0.
+        glUniform1i(shader->GetUniformLocation("texture_1"), 0);
 
         // Note that we only render a single mesh!
-        RenderMesh(meshes["bamboo"], shaders["Instances"], glm::vec3(-3.3f, 0.5f, 0), glm::vec3(0.1f));
+        // The first bamboo starts at the XZ origin; the geometry shader
+        // offsets subsequent instances from this point.
+        RenderMesh(meshes["bamboo"], shaders["Instances"], glm::vec3(1, 1, 0), glm::vec3(0.1f));
     }
 }
 
@@ -95,6 +103,19 @@ void Lab3::OnInputUpdate(float deltaTime, int mods)
     // Treat continuous update based on input with window->KeyHold()
 
     // TODO(student): Add events for modifying the shrinking parameter
+    constexpr float shrinkSpeed = 0.5f;
+    constexpr float maxShrink = 0.9f;
+
+    // Z shrinks every triangle towards its centroid; X restores it.
+    if (window->KeyHold(GLFW_KEY_Z)) {
+        shrink += shrinkSpeed * deltaTime;
+    }
+    if (window->KeyHold(GLFW_KEY_X)) {
+        shrink -= shrinkSpeed * deltaTime;
+    }
+
+    // Do not allow degenerate or inverted triangles.
+    shrink = glm::clamp(shrink, 0.0f, maxShrink);
 
 }
 
@@ -103,16 +124,15 @@ void Lab3::OnKeyPress(int key, int mods)
 {
     // Add key press event
 
-    if (key == GLFW_KEY_EQUAL)
+    if ((key == GLFW_KEY_EQUAL || key == GLFW_KEY_KP_ADD) && nrInstances < maxInstances)
     {
         nrInstances++;
-        nrInstances %= maxInstances;
     }
 
-    if (key == GLFW_KEY_MINUS)
+    // Keep at least eight instances: two complete columns of four.
+    if ((key == GLFW_KEY_MINUS || key == GLFW_KEY_KP_SUBTRACT) && nrInstances > 8)
     {
         nrInstances--;
-        nrInstances %= maxInstances;
     }
 }
 
